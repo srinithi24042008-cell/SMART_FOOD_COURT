@@ -1,0 +1,685 @@
+{% extends "base.html" %}
+
+{% block title %}Biller & Food Court Console - CampusBite{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-lg-4 py-4">
+    <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-3">
+        <div>
+            <h2 class="fw-bold mb-0 text-dark"><i class="bi bi-speedometer2 text-success me-2"></i> Food Court Billing & Kitchen Console</h2>
+            <p class="text-muted small mb-0">Live order workflow, rapid token lookup, payment collection & inventory control</p>
+        </div>
+        <div class="d-flex flex-wrap gap-2">
+            <button class="btn btn-outline-dark btn-sm rounded-pill fw-bold" onclick="refreshAll()">
+                <i class="bi bi-arrow-clockwise me-1"></i> Refresh Console
+            </button>
+            <button class="btn btn-campus-orange btn-sm rounded-pill fw-bold shadow-sm" data-bs-toggle="modal" data-bs-target="#addFoodModal">
+                <i class="bi bi-plus-circle me-1"></i> Add New Menu Item
+            </button>
+        </div>
+    </div>
+
+    <div class="row g-3 mb-4">
+        <div class="col-6 col-md-4 col-xl-2">
+            <div class="stat-card">
+                <div class="stat-label">Total Orders</div>
+                <div class="stat-value text-primary" id="statTotalOrders">0</div>
+            </div>
+        </div>
+        <div class="col-6 col-md-4 col-xl-2">
+            <div class="stat-card">
+                <div class="stat-label">Pending / Prep</div>
+                <div class="stat-value text-warning" id="statPendingOrders">0</div>
+            </div>
+        </div>
+        <div class="col-6 col-md-4 col-xl-2">
+            <div class="stat-card">
+                <div class="stat-label">Ready for Pickup</div>
+                <div class="stat-value text-success" id="statReadyOrders">0</div>
+            </div>
+        </div>
+        <div class="col-6 col-md-4 col-xl-2">
+            <div class="stat-card">
+                <div class="stat-label">Total Sales (Paid)</div>
+                <div class="stat-value text-success" id="statDailySales">₹0.00</div>
+            </div>
+        </div>
+        <div class="col-6 col-md-4 col-xl-2">
+            <div class="stat-card">
+                <div class="stat-label">Cash Pending</div>
+                <div class="stat-value text-danger" id="statCashPending">₹0.00</div>
+            </div>
+        </div>
+        <div class="col-6 col-md-4 col-xl-2">
+            <div class="stat-card">
+                <div class="stat-label">Kitchen Live Queue</div>
+                <div class="stat-value text-info" id="statQueueSize">0</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="campus-card mb-4 bg-white border border-2 border-warning-subtle shadow-sm">
+        <div class="row align-items-center g-3">
+            <div class="col-md-7">
+                <h5 class="fw-bold mb-1 text-dark"><i class="bi bi-search text-warning me-2"></i> Fast Counter Token & Bill Lookup</h5>
+                <p class="text-muted small mb-2">Student at counter? Enter their pickup token (e.g. <code>TKN-A47</code>) or bill number to instantly inspect, collect cash, and hand over food.</p>
+                <div class="input-group">
+                    <input type="text" id="tokenSearchInput" class="form-control form-control-lg bg-light" placeholder="Enter Token No or Bill No..." style="text-transform:uppercase;">
+                    <button class="btn btn-campus-primary px-4 fw-bold" onclick="searchToken()">
+                        <i class="bi bi-check2-circle me-1"></i> Verify Token
+                    </button>
+                </div>
+            </div>
+            <div class="col-md-5" id="tokenResultContainer">
+                <div class="p-3 bg-light rounded-3 text-center border text-muted small">
+                    Token verification results will appear here.
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <ul class="nav nav-pills mb-4 gap-2 border-bottom pb-3" id="billerTab" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link active rounded-pill fw-bold px-4" id="orders-tab" data-bs-toggle="pill" data-bs-target="#orders-pane" type="button" role="tab">
+                <i class="bi bi-receipt me-1"></i> Live Kitchen & Order Orders (<span id="ordersCountBadge">0</span>)
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link rounded-pill fw-bold px-4" id="inventory-tab" data-bs-toggle="pill" data-bs-target="#inventory-pane" type="button" role="tab">
+                <i class="bi bi-boxes me-1"></i> Food Inventory & Stock Control (<span id="inventoryCountBadge">0</span>)
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link rounded-pill fw-bold px-4" id="alerts-tab" data-bs-toggle="pill" data-bs-target="#alerts-pane" type="button" role="tab">
+                <i class="bi bi-exclamation-triangle-fill text-danger me-1"></i> Low Stock Warnings (<span id="lowStockBadge">0</span>)
+            </button>
+        </li>
+    </ul>
+
+    <div class="tab-content" id="billerTabContent">
+        <div class="tab-pane fade show active" id="orders-pane" role="tabpanel">
+            <div class="campus-card">
+                <div class="row g-2 mb-3 pb-3 border-bottom align-items-center">
+                    <div class="col-md-3">
+                        <select class="form-select form-select-sm" id="filterStatus" onchange="loadBillerOrders()">
+                            <option value="ALL">All Order Statuses</option>
+                            <option value="CONFIRMED">Confirmed (New)</option>
+                            <option value="PREPARING">Preparing in Kitchen</option>
+                            <option value="READY_FOR_PICKUP">Ready for Pickup</option>
+                            <option value="COLLECTED">Collected / Completed</option>
+                            <option value="CANCELLED">Cancelled</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <select class="form-select form-select-sm" id="filterPayment" onchange="loadBillerOrders()">
+                            <option value="ALL">All Payment Methods</option>
+                            <option value="UPI">UPI / GPay</option>
+                            <option value="CASH">Cash on Delivery</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <select class="form-select form-select-sm" id="sortOrders" onchange="loadBillerOrders()">
+                            <option value="id_desc">Newest Orders First</option>
+                            <option value="amount_asc">Sort by Total: Low to High</option>
+                            <option value="amount_desc">Sort by Total: High to Low</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3 text-end">
+                        <span class="badge bg-light text-muted border py-2 px-3 small">
+                            <i class="bi bi-clock me-1"></i> Auto-polled every 5s
+                        </span>
+                    </div>
+                </div>
+
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="table-light small text-uppercase text-muted">
+                            <tr>
+                                <th>Order / Token</th>
+                                <th>Customer Details</th>
+                                <th>Items Ordered</th>
+                                <th>Total & Payment</th>
+                                <th>Current Status</th>
+                                <th>Action / Status Advance</th>
+                                <th>Receipt</th>
+                            </tr>
+                        </thead>
+                        <tbody id="billerOrdersTbody">
+                            <tr>
+                                <td colspan="7" class="text-center py-4 text-muted">Loading orders...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div class="tab-pane fade" id="inventory-pane" role="tabpanel">
+            <div class="campus-card">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="table-light small text-uppercase text-muted">
+                            <tr>
+                                <th>Dish</th>
+                                <th>Category</th>
+                                <th>Price</th>
+                                <th>Diet</th>
+                                <th>Current Stock</th>
+                                <th>Availability Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="inventoryTbody">
+                            <tr>
+                                <td colspan="7" class="text-center py-4 text-muted">Loading menu items...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div class="tab-pane fade" id="alerts-pane" role="tabpanel">
+            <div class="campus-card">
+                <h5 class="fw-bold mb-3 text-danger"><i class="bi bi-exclamation-octagon-fill me-2"></i> Low Stock & Depleted Items</h5>
+                <div id="lowStockItemsList">
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="addFoodModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content rounded-4 border-0 shadow">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="modal-title fw-bold text-dark"><i class="bi bi-plus-circle-fill text-success me-2"></i> Add Food Item to Menu</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4">
+                <form id="addFoodForm">
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold text-muted">Food Item Name</label>
+                        <input type="text" id="addFoodName" class="form-control" placeholder="e.g. Paneer Pulao" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold text-muted">Description</label>
+                        <textarea id="addFoodDesc" class="form-control" rows="2" placeholder="Ingredients, taste, serving..."></textarea>
+                    </div>
+                    <div class="row g-2 mb-3">
+                        <div class="col-6">
+                            <label class="form-label small fw-bold text-muted">Price (₹)</label>
+                            <input type="number" step="0.5" id="addFoodPrice" class="form-control" placeholder="90" required>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label small fw-bold text-muted">Initial Stock Quantity</label>
+                            <input type="number" id="addFoodStock" class="form-control" value="40" required>
+                        </div>
+                    </div>
+                    <div class="row g-2 mb-3">
+                        <div class="col-6">
+                            <label class="form-label small fw-bold text-muted">Category</label>
+                            <select id="addFoodCategory" class="form-select">
+                                <option>South Indian</option>
+                                <option>North Indian</option>
+                                <option>Snacks & Chaat</option>
+                                <option>Beverages & Juices</option>
+                                <option>Combos & Thali</option>
+                                <option>Desserts</option>
+                            </select>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label small fw-bold text-muted">Prep Time (Mins)</label>
+                            <input type="number" id="addFoodPrep" class="form-control" value="8" required>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold text-muted">Image URL</label>
+                        <input type="url" id="addFoodImage" class="form-control" placeholder="https://images.unsplash.com/...">
+                    </div>
+                    <div class="form-check mb-3">
+                        <input class="form-check-input" type="checkbox" id="addFoodIsVeg" checked>
+                        <label class="form-check-label small fw-bold" for="addFoodIsVeg">Vegetarian Dish</label>
+                    </div>
+                    <button type="submit" class="btn btn-campus-primary w-100 py-2 fw-bold">
+                        Add to Food Court Menu
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="receiptModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content rounded-4 border-0 shadow-lg">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="modal-title fw-bold">Official Campus Dining Bill</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4" id="printableReceipt">
+            </div>
+            <div class="modal-footer border-0">
+                <button class="btn btn-secondary rounded-pill" data-bs-dismiss="modal">Close</button>
+                <button class="btn btn-primary rounded-pill fw-bold" onclick="window.print()">
+                    <i class="bi bi-printer me-1"></i> Print Receipt
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+let currentOrders = [];
+let currentInventory = [];
+
+async function loadAnalytics() {
+    try {
+        const res = await fetch('/api/biller/analytics');
+        const data = await res.json();
+        if (data.success) {
+            const a = data.analytics;
+            document.getElementById('statTotalOrders').textContent = a.total_orders;
+            document.getElementById('statPendingOrders').textContent = a.pending_orders;
+            document.getElementById('statReadyOrders').textContent = a.ready_orders;
+            document.getElementById('statDailySales').textContent = `₹${a.daily_sales.toFixed(2)}`;
+            document.getElementById('statCashPending').textContent = `₹${a.cash_pending.toFixed(2)}`;
+            document.getElementById('statQueueSize').textContent = a.active_kitchen_queue_size;
+
+            document.getElementById('lowStockBadge').textContent = a.low_stock_count;
+            renderLowStockAlerts(a.low_stock_items);
+        }
+    } catch(e) {}
+}
+
+async function loadBillerOrders() {
+    const status = document.getElementById('filterStatus').value;
+    const payment = document.getElementById('filterPayment').value;
+    const sort = document.getElementById('sortOrders').value;
+
+    try {
+        const res = await fetch(`/api/biller/orders?status=${status}&payment_method=${payment}&sort=${sort}`);
+        const data = await res.json();
+        if (data.success) {
+            currentOrders = data.orders;
+            document.getElementById('ordersCountBadge').textContent = currentOrders.length;
+            renderOrdersTable();
+        }
+    } catch(e) {}
+}
+
+function renderOrdersTable() {
+    const tbody = document.getElementById('billerOrdersTbody');
+    if (!currentOrders || currentOrders.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="7" class="text-center py-4 text-muted">No orders matching selected criteria.</td></tr>`;
+        return;
+    }
+
+    tbody.innerHTML = currentOrders.map(ord => {
+        const itemsStr = (ord.items || []).map(i => `<span class="badge bg-light text-dark border me-1 mb-1">${i.food_name} &times; ${i.quantity}</span>`).join('');
+        
+        let actionBtn = '';
+        if (ord.order_status === 'CONFIRMED') {
+            actionBtn = `<button class="btn btn-sm btn-warning rounded-pill fw-bold" onclick="advanceStatus(${ord.id}, 'PREPARING')"><i class="bi bi-fire me-1"></i> Start Prep</button>`;
+        } else if (ord.order_status === 'PREPARING') {
+            actionBtn = `<button class="btn btn-sm btn-success rounded-pill fw-bold" onclick="advanceStatus(${ord.id}, 'READY_FOR_PICKUP')"><i class="bi bi-bell me-1"></i> Ready for Pickup</button>`;
+        } else if (ord.order_status === 'READY_FOR_PICKUP') {
+            actionBtn = `<button class="btn btn-sm btn-primary rounded-pill fw-bold" onclick="advanceStatus(${ord.id}, 'COLLECTED')"><i class="bi bi-check2-all me-1"></i> Mark Collected</button>`;
+        } else {
+            actionBtn = `<span class="text-muted small">Completed</span>`;
+        }
+
+        let collectCashBtn = '';
+        if (ord.payment_method === 'CASH' && ord.payment_status === 'PENDING') {
+            collectCashBtn = `
+                <button class="btn btn-sm btn-outline-success rounded-pill fw-bold mt-1 d-block" onclick="markCashPaid(${ord.id})">
+                    <i class="bi bi-cash me-1"></i> Mark Cash Paid
+                </button>
+            `;
+        }
+
+        return `
+            <tr>
+                <td>
+                    <div class="fw-bold text-dark">${ord.bill_no}</div>
+                    <span class="token-badge-lg py-1 px-2 fs-6 my-1 d-inline-block">${ord.token_no}</span>
+                    <div class="text-muted" style="font-size:0.75rem;">${ord.created_at}</div>
+                </td>
+                <td>
+                    <div class="fw-bold text-dark">${ord.student_name}</div>
+                    <div class="text-muted small">${ord.student_phone || ord.student_email || ''}</div>
+                </td>
+                <td style="max-width: 250px;">
+                    <div>${itemsStr}</div>
+                    ${ord.special_instructions ? `<div class="small text-danger fst-italic">Note: ${ord.special_instructions}</div>` : ''}
+                </td>
+                <td>
+                    <div class="fw-extrabold text-success fs-6">₹${ord.total_amount.toFixed(2)}</div>
+                    <div class="small">
+                        <span class="badge ${ord.payment_method === 'UPI' ? 'bg-primary-subtle text-primary' : 'bg-secondary-subtle text-dark'}">${ord.payment_method}</span>
+                        <span class="badge ${ord.payment_status === 'PAID' ? 'bg-success' : 'bg-warning text-dark'}">${ord.payment_status}</span>
+                    </div>
+                    ${collectCashBtn}
+                </td>
+                <td>
+                    <span class="status-badge status-${ord.order_status}">${ord.order_status.replace(/_/g, ' ')}</span>
+                </td>
+                <td>
+                    ${actionBtn}
+                </td>
+                <td>
+                    <button class="btn btn-sm btn-outline-secondary rounded-pill" onclick="openReceipt(${ord.id})">
+                        <i class="bi bi-receipt"></i>
+                    </button>
+                </td>
+            </tr>
+        `;
+    }).join('');
+}
+
+async function loadInventory() {
+    try {
+        const res = await fetch('/api/food/items');
+        const data = await res.json();
+        if (data.success) {
+            currentInventory = data.items;
+            document.getElementById('inventoryCountBadge').textContent = currentInventory.length;
+            renderInventoryTable();
+        }
+    } catch(e) {}
+}
+
+function renderInventoryTable() {
+    const tbody = document.getElementById('inventoryTbody');
+    tbody.innerHTML = currentInventory.map(item => {
+        return `
+            <tr>
+                <td>
+                    <div class="d-flex align-items-center gap-2">
+                        <img src="${item.image_url}" class="rounded-3" style="width: 44px; height: 44px; object-fit: cover;" onerror="this.src='https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=600'">
+                        <div>
+                            <div class="fw-bold text-dark">${item.name}</div>
+                            <div class="text-muted small">${item.prep_time_mins} mins prep</div>
+                        </div>
+                    </div>
+                </td>
+                <td><span class="badge bg-light text-dark border">${item.category}</span></td>
+                <td class="fw-bold text-dark">₹${item.price.toFixed(2)}</td>
+                <td>
+                    <span class="badge ${item.is_veg ? 'bg-success-subtle text-success' : 'bg-danger-subtle text-danger'}">
+                        ${item.is_veg ? 'VEG' : 'NON-VEG'}
+                    </span>
+                </td>
+                <td>
+                    <div class="input-group input-group-sm" style="width: 120px;">
+                        <input type="number" class="form-control" id="stock_${item.id}" value="${item.stock_quantity}">
+                        <button class="btn btn-outline-secondary" onclick="updateStockDirect(${item.id})"><i class="bi bi-check"></i></button>
+                    </div>
+                </td>
+                <td>
+                    <button class="btn btn-sm ${item.is_available ? 'btn-success' : 'btn-danger'} rounded-pill fw-bold" onclick="toggleStock(${item.id})">
+                        ${item.is_available ? '<i class="bi bi-check2-circle me-1"></i> Available' : '<i class="bi bi-x-circle me-1"></i> Out of Stock'}
+                    </button>
+                </td>
+                <td>
+                    <button class="btn btn-sm btn-outline-danger border-0" onclick="deleteFood(${item.id}, '${item.name}')">
+                        <i class="bi bi-trash3"></i>
+                    </button>
+                </td>
+            </tr>
+        `;
+    }).join('');
+}
+
+function renderLowStockAlerts(items) {
+    const container = document.getElementById('lowStockItemsList');
+    if (!items || items.length === 0) {
+        container.innerHTML = `<div class="alert alert-success"><i class="bi bi-check2-circle me-2"></i> All menu items have healthy inventory levels!</div>`;
+        return;
+    }
+
+    container.innerHTML = items.map(item => `
+        <div class="d-flex align-items-center justify-content-between p-3 rounded-3 bg-light border mb-2">
+            <div>
+                <strong class="text-danger">${item.name}</strong> (${item.category})
+                <div class="small text-muted">Remaining Stock: <span class="badge bg-danger">${item.stock_quantity} left</span> &bull; Status: ${item.is_available ? 'Available' : 'Marked Out of Stock'}</div>
+            </div>
+            <div class="d-flex gap-2">
+                <button class="btn btn-sm btn-outline-primary rounded-pill fw-bold" onclick="promptRestock(${item.id}, '${item.name}')">
+                    + Restock 50 Units
+                </button>
+            </div>
+        </div>
+    `).join('');
+}
+
+async function promptRestock(id, name) {
+    try {
+        const res = await fetch(`/api/biller/food/update/${id}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ stock_quantity: 50, is_available: 1 })
+        });
+        const data = await res.json();
+        if (data.success) {
+            refreshAll();
+        }
+    } catch(e) {}
+}
+
+async function updateStockDirect(id) {
+    const qty = parseInt(document.getElementById(`stock_${id}`).value);
+    if (isNaN(qty) || qty < 0) return;
+    try {
+        const res = await fetch(`/api/biller/food/update/${id}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ stock_quantity: qty, is_available: qty > 0 ? 1 : 0 })
+        });
+        const data = await res.json();
+        if (data.success) {
+            refreshAll();
+        }
+    } catch(e) {}
+}
+
+async function toggleStock(id) {
+    try {
+        const res = await fetch(`/api/biller/food/toggle-stock/${id}`, { method: 'POST' });
+        const data = await res.json();
+        if (data.success) {
+            refreshAll();
+        }
+    } catch(e) {}
+}
+
+async function deleteFood(id, name) {
+    if (!confirm(`Are you sure you want to remove '${name}' from the food court menu?`)) return;
+    try {
+        const res = await fetch(`/api/biller/food/delete/${id}`, { method: 'POST' });
+        const data = await res.json();
+        if (data.success) {
+            refreshAll();
+        }
+    } catch(e) {}
+}
+
+async function advanceStatus(orderId, nextStatus) {
+    try {
+        const res = await fetch(`/api/biller/orders/update-status/${orderId}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ order_status: nextStatus })
+        });
+        const data = await res.json();
+        if (data.success) {
+            refreshAll();
+        }
+    } catch(e) {}
+}
+
+async function markCashPaid(orderId) {
+    try {
+        const res = await fetch(`/api/biller/orders/update-status/${orderId}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ payment_status: 'PAID' })
+        });
+        const data = await res.json();
+        if (data.success) {
+            refreshAll();
+        }
+    } catch(e) {}
+}
+
+async function searchToken() {
+    const token = document.getElementById('tokenSearchInput').value.trim();
+    const container = document.getElementById('tokenResultContainer');
+    if (!token) return;
+
+    try {
+        const res = await fetch('/api/biller/orders/verify-token', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ token: token })
+        });
+        const data = await res.json();
+        if (data.success) {
+            const ord = data.order;
+            container.innerHTML = `
+                <div class="p-3 bg-white rounded-3 border border-success shadow-sm text-start">
+                    <div class="d-flex justify-content-between">
+                        <span class="token-badge-lg py-1 px-2 fs-6">${ord.token_no}</span>
+                        <span class="status-badge status-${ord.order_status}">${ord.order_status}</span>
+                    </div>
+                    <div class="fw-bold mt-2 text-dark">${ord.student_name} (${ord.bill_no})</div>
+                    <div class="small text-muted">Amount: <strong class="text-success">₹${ord.total_amount.toFixed(2)}</strong> &bull; Pay: ${ord.payment_method} (${ord.payment_status})</div>
+                    <div class="d-flex gap-2 mt-2">
+                        ${ord.payment_method === 'CASH' && ord.payment_status === 'PENDING' ? `
+                            <button class="btn btn-sm btn-success rounded-pill fw-bold" onclick="markCashPaid(${ord.id})">Collect Cash</button>
+                        ` : ''}
+                        ${ord.order_status === 'READY_FOR_PICKUP' ? `
+                            <button class="btn btn-sm btn-primary rounded-pill fw-bold" onclick="advanceStatus(${ord.id}, 'COLLECTED')">Mark Collected</button>
+                        ` : ''}
+                        <button class="btn btn-sm btn-outline-secondary rounded-pill" onclick="openReceipt(${ord.id})">Print Bill</button>
+                    </div>
+                </div>
+            `;
+        } else {
+            container.innerHTML = `<div class="p-3 bg-danger-subtle text-danger rounded-3 text-center small">${data.error}</div>`;
+        }
+    } catch(e) {
+        container.innerHTML = `<div class="p-3 bg-danger-subtle text-danger rounded-3 text-center small">Lookup failed</div>`;
+    }
+}
+
+function openReceipt(orderId) {
+    const ord = currentOrders.find(o => o.id === orderId);
+    if (!ord) return;
+
+    const receiptBody = document.getElementById('printableReceipt');
+    const itemsHtml = (ord.items || []).map(i => `
+        <tr>
+            <td class="text-start">${i.food_name}</td>
+            <td class="text-center">${i.quantity}</td>
+            <td class="text-end">₹${i.unit_price.toFixed(2)}</td>
+            <td class="text-end fw-bold">₹${i.subtotal.toFixed(2)}</td>
+        </tr>
+    `).join('');
+
+    receiptBody.innerHTML = `
+        <div class="text-center border-bottom pb-3 mb-3">
+            <h4 class="fw-extrabold mb-0 text-dark">CAMPUSBITE FOOD COURT</h4>
+            <div class="small text-muted">Central University Dining Complex &bull; Counter 01</div>
+            <div class="small text-muted">GSTIN: 33AAAAA0000A1Z5</div>
+        </div>
+
+        <div class="d-flex justify-content-between mb-2 small">
+            <div>
+                <strong>Bill No:</strong> ${ord.bill_no}<br>
+                <strong>Date & Time:</strong> ${ord.created_at}
+            </div>
+            <div class="text-end">
+                <strong>Token No:</strong> <span class="badge bg-dark fs-6">${ord.token_no}</span><br>
+                <strong>Customer:</strong> ${ord.student_name}
+            </div>
+        </div>
+
+        <table class="table table-sm text-center small mb-3 border">
+            <thead class="table-light">
+                <tr>
+                    <th class="text-start">Item</th>
+                    <th>Qty</th>
+                    <th class="text-end">Rate</th>
+                    <th class="text-end">Amount</th>
+                </tr>
+            </thead>
+            <tbody>${itemsHtml}</tbody>
+            <tfoot>
+                <tr class="fw-bold">
+                    <td colspan="3" class="text-end">Total Amount:</td>
+                    <td class="text-end fs-6 text-success">₹${ord.total_amount.toFixed(2)}</td>
+                </tr>
+            </tfoot>
+        </table>
+
+        <div class="p-2 bg-light rounded text-center small border mb-3">
+            Payment Mode: <strong>${ord.payment_method}</strong> | Payment Status: <span class="badge ${ord.payment_status === 'PAID' ? 'bg-success' : 'bg-warning text-dark'}">${ord.payment_status}</span>
+        </div>
+
+        <div class="text-center text-muted" style="font-size: 0.75rem;">
+            Thank you for dining with CampusBite!<br>
+            Please collect your meal promptly when your token is announced.
+        </div>
+    `;
+
+    const receiptModal = new bootstrap.Modal(document.getElementById('receiptModal'));
+    receiptModal.show();
+}
+
+document.getElementById('addFoodForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    const payload = {
+        name: document.getElementById('addFoodName').value.trim(),
+        description: document.getElementById('addFoodDesc').value.trim(),
+        price: parseFloat(document.getElementById('addFoodPrice').value),
+        stock_quantity: parseInt(document.getElementById('addFoodStock').value),
+        category: document.getElementById('addFoodCategory').value,
+        prep_time_mins: parseInt(document.getElementById('addFoodPrep').value),
+        image_url: document.getElementById('addFoodImage').value.trim(),
+        is_veg: document.getElementById('addFoodIsVeg').checked,
+        is_available: 1
+    };
+
+    try {
+        const res = await fetch('/api/biller/food/add', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+        if (data.success) {
+            const modalEl = document.getElementById('addFoodModal');
+            bootstrap.Modal.getInstance(modalEl).hide();
+            document.getElementById('addFoodForm').reset();
+            refreshAll();
+        } else {
+            alert(data.error);
+        }
+    } catch(err) {
+        alert('Failed to add food item: ' + err);
+    }
+});
+
+function refreshAll() {
+    loadAnalytics();
+    loadBillerOrders();
+    loadInventory();
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    refreshAll();
+    setInterval(refreshAll, 5000);
+});
+</script>
+{% endblock %}

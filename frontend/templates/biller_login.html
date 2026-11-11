@@ -1,0 +1,116 @@
+{% extends "base.html" %}
+
+{% block title %}Biller & Admin Portal - CampusBite{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6 col-lg-5">
+            <div class="campus-card shadow-lg p-4 p-md-5 border-top border-4" style="border-top-color: var(--brand-orange-primary) !important;">
+                <div class="text-center mb-4">
+                    <span class="badge bg-warning-subtle text-dark px-3 py-2 rounded-pill fw-bold mb-2">
+                        <i class="bi bi-shield-lock-fill me-1"></i> Staff Administration Only
+                    </span>
+                    <h3 class="fw-bold mt-2">Biller & Kitchen Sign In</h3>
+                    <p class="text-muted small">Manage live counter orders, verify tokens, and control inventory.</p>
+                </div>
+
+                <div id="billerAlert" class="alert alert-danger d-none" role="alert"></div>
+
+                <form id="billerLoginForm">
+                    <div class="mb-3">
+                        <label class="form-label fw-bold small text-muted">Staff Email / Employee ID</label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-light border-end-0"><i class="bi bi-person-badge text-muted"></i></span>
+                            <input type="email" id="billerEmail" class="form-control bg-light border-start-0" placeholder="e.g. biller@campus.edu" required>
+                        </div>
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="form-label fw-bold small text-muted">Security PIN / Password</label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-light border-end-0"><i class="bi bi-key text-muted"></i></span>
+                            <input type="password" id="billerPassword" class="form-control bg-light border-start-0" placeholder="Enter staff password" required>
+                            <button class="btn btn-outline-secondary border-start-0" type="button" id="toggleBillerPassword">
+                                <i class="bi bi-eye"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn btn-campus-orange w-100 py-2 fs-6 fw-bold mb-3" id="billerSubmitBtn">
+                        <i class="bi bi-box-arrow-in-right me-1"></i> Access Biller Dashboard
+                    </button>
+
+                    <hr class="my-3">
+
+                    <div class="bg-light p-3 rounded-3 text-center">
+                        <div class="small fw-bold text-muted mb-2"><i class="bi bi-magic me-1"></i> Quick Staff Test Account</div>
+                        <button type="button" class="btn btn-sm btn-outline-dark fw-bold rounded-pill w-100" onclick="fillBillerDemo()">
+                            Auto-fill Demo Biller Credentials
+                        </button>
+                    </div>
+
+                    <div class="text-center mt-3">
+                        <a href="/login" class="text-muted small text-decoration-none">
+                            <i class="bi bi-arrow-left me-1"></i> Back to Student Portal
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.getElementById('toggleBillerPassword').addEventListener('click', function() {
+    const pwdInput = document.getElementById('billerPassword');
+    const icon = this.querySelector('i');
+    if (pwdInput.type === 'password') {
+        pwdInput.type = 'text';
+        icon.classList.replace('bi-eye', 'bi-eye-slash');
+    } else {
+        pwdInput.type = 'password';
+        icon.classList.replace('bi-eye-slash', 'bi-eye');
+    }
+});
+
+function fillBillerDemo() {
+    document.getElementById('billerEmail').value = 'biller@campus.edu';
+    document.getElementById('billerPassword').value = 'biller123';
+}
+
+document.getElementById('billerLoginForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    const alertEl = document.getElementById('billerAlert');
+    const btn = document.getElementById('billerSubmitBtn');
+    alertEl.classList.add('d-none');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Authenticating...';
+
+    const email = document.getElementById('billerEmail').value.trim();
+    const password = document.getElementById('billerPassword').value;
+
+    try {
+        const res = await fetch('/api/auth/login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email, password, role: 'biller' })
+        });
+        const data = await res.json();
+        if (data.success) {
+            window.location.href = data.redirect || '/biller/dashboard';
+        } else {
+            alertEl.textContent = data.error || 'Authentication failed';
+            alertEl.classList.remove('d-none');
+            btn.disabled = false;
+            btn.innerHTML = '<i class="bi bi-box-arrow-in-right me-1"></i> Access Biller Dashboard';
+        }
+    } catch (err) {
+        alertEl.textContent = 'Server error. Please try again.';
+        alertEl.classList.remove('d-none');
+        btn.disabled = false;
+        btn.innerHTML = '<i class="bi bi-box-arrow-in-right me-1"></i> Access Biller Dashboard';
+    }
+});
+</script>
+{% endblock %}

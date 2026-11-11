@@ -1,0 +1,153 @@
+{% extends "base.html" %}
+
+{% block title %}C Data Structures Core - CampusBite Architecture{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="mb-4">
+        <h2 class="fw-bold mb-1"><i class="bi bi-cpu text-primary me-2"></i> C Data Structures & Algorithms Core Module</h2>
+        <p class="text-muted small">High-efficiency C implementation interfacing with the Python Flask web application.</p>
+    </div>
+
+    <div class="campus-card mb-4 border-2 border-primary-subtle shadow-sm">
+        <div class="d-flex flex-wrap justify-content-between align-items-center gap-3">
+            <div>
+                <span class="badge bg-primary px-3 py-2 rounded-pill fw-bold mb-2">Live C-Core Bridge Status</span>
+                <h4 class="fw-bold text-dark mb-1" id="bridgeMode">Checking status...</h4>
+                <div class="text-muted small">
+                    Direct integration between Python Flask runtime and C data structure definitions.
+                </div>
+            </div>
+            <div class="d-flex gap-2">
+                <button class="btn btn-sm btn-outline-primary rounded-pill fw-bold" onclick="refreshCStatus()">
+                    <i class="bi bi-arrow-clockwise me-1"></i> Check C Module Status
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4 mb-4">
+        <div class="col-md-6">
+            <div class="campus-card h-100">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <h5 class="fw-bold text-dark mb-0"><i class="bi bi-collection-play-fill text-warning me-2"></i> 1. FIFO Kitchen Order Queue</h5>
+                    <span class="badge bg-warning-subtle text-warning border border-warning" id="liveQueueBadge">0 Orders In Queue</span>
+                </div>
+                <p class="text-muted small">
+                    <strong>Structure:</strong> <code>OrderQueue</code> with <code>Order* front</code>, <code>Order* rear</code>, and <code>int size</code>.<br>
+                    <strong>Time Complexity:</strong> O(1) Enqueue, O(1) Dequeue, O(1) Peek.<br>
+                    <strong>Purpose:</strong> Enforces strictly fair First-Come-First-Served food preparation in the campus kitchen.
+                </p>
+                <div class="bg-light p-3 rounded-3 small font-monospace border mb-3">
+                    void enqueue_order(OrderQueue* q, Order* order);<br>
+                    Order* dequeue_order(OrderQueue* q);<br>
+                    Order* peek_queue(OrderQueue* q);
+                </div>
+                <div class="text-muted small">
+                    Currently enqueued orders in memory: <strong id="queueDetailText">Loading...</strong>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6">
+            <div class="campus-card h-100">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <h5 class="fw-bold text-dark mb-0"><i class="bi bi-link-45deg text-success me-2"></i> 2. Singly Linked List for Order History</h5>
+                    <span class="badge bg-success-subtle text-success border border-success" id="liveListBadge">Active Records</span>
+                </div>
+                <p class="text-muted small">
+                    <strong>Structure:</strong> <code>OrderLinkedList</code> holding dynamic <code>Order* head</code> nodes with embedded <code>OrderItemNode*</code> sub-lists.<br>
+                    <strong>Time Complexity:</strong> O(1) Append, O(N) Search by Token / Bill.<br>
+                    <strong>Purpose:</strong> Stores sequential order logs with instant token and bill number search capabilities.
+                </p>
+                <div class="bg-light p-3 rounded-3 small font-monospace border mb-3">
+                    Order* search_order_by_token(OrderLinkedList* list, const char* token_no);<br>
+                    Order* search_order_by_bill(OrderLinkedList* list, const char* bill_no);<br>
+                    void insert_order_sorted_by_time(OrderLinkedList* list, Order* order);
+                </div>
+                <div class="text-muted small">
+                    Total synchronized order records: <strong id="listDetailText">Loading...</strong>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6">
+            <div class="campus-card h-100">
+                <h5 class="fw-bold text-dark mb-2"><i class="bi bi-sort-numeric-down text-primary me-2"></i> 3. O(N log N) Merge Sort on Linked List</h5>
+                <p class="text-muted small">
+                    <strong>Algorithm:</strong> Divide-and-conquer Merge Sort implemented on singly linked lists via pointer splitting (slow/fast pointers).<br>
+                    <strong>Time Complexity:</strong> O(N log N) Guaranteed, O(log N) Call stack space.<br>
+                    <strong>Purpose:</strong> Powers the Biller Dashboard's analytics sorting by total order value (Low to High and High to Low).
+                </p>
+                <div class="bg-light p-3 rounded-3 small font-monospace border">
+                    void split_list(Order* source, Order** frontRef, Order** backRef);<br>
+                    void sort_orders_by_amount(Order** headRef, int ascending);<br>
+                    void sort_orders_by_time(Order** headRef, int ascending);
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6">
+            <div class="campus-card h-100">
+                <h5 class="fw-bold text-dark mb-2"><i class="bi bi-search text-danger me-2"></i> 4. O(log N) Binary Search on Order Array</h5>
+                <p class="text-muted small">
+                    <strong>Algorithm:</strong> Classic iterative binary search operating on contiguous arrays of order references sorted by numeric ID.<br>
+                    <strong>Time Complexity:</strong> O(log N) Time, O(1) Auxiliary space.<br>
+                    <strong>Purpose:</strong> Sub-millisecond lookup when searching through indexed archives by order identifier.
+                </p>
+                <div class="bg-light p-3 rounded-3 small font-monospace border">
+                    int binary_search_order_by_id(Order* orders[], int low, int high, int target_id);
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="campus-card mb-4">
+        <h4 class="fw-bold text-dark mb-3"><i class="bi bi-terminal-fill text-dark me-2"></i> How to Compile and Run the C Module</h4>
+        <p class="text-muted small">The C source code is located in the <code>c_core/</code> folder with full header files, implementation, unit tests, and Makefile.</p>
+
+        <div class="row g-3">
+            <div class="col-lg-6">
+                <div class="p-3 bg-light rounded-3 border">
+                    <div class="fw-bold small text-dark mb-2"><i class="bi bi-windows me-1"></i> Compilation on Windows (MinGW / GCC)</div>
+                    <pre class="mb-0 small text-dark" style="font-family: Consolas, monospace;">
+cd c_core
+gcc -Wall -Wextra -O2 -o food_court_ds_cli.exe food_court_ds.c main.c
+./food_court_ds_cli.exe test</pre>
+                </div>
+            </div>
+
+            <div class="col-lg-6">
+                <div class="p-3 bg-light rounded-3 border">
+                    <div class="fw-bold small text-dark mb-2"><i class="bi bi-gear-wide-connected me-1"></i> Building Shared Library (DLL / .so for ctypes)</div>
+                    <pre class="mb-0 small text-dark" style="font-family: Consolas, monospace;">
+# Windows DLL
+gcc -shared -o food_court_ds.dll food_court_ds.c
+
+# Linux / MacOS Shared Object
+gcc -fPIC -shared -o libfoodcourt.so food_court_ds.c</pre>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+async function refreshCStatus() {
+    try {
+        const res = await fetch('/api/c-core/status');
+        const data = await res.json();
+        if (data.success) {
+            const c = data.c_core;
+            document.getElementById('bridgeMode').textContent = c.integration_mode;
+            document.getElementById('liveQueueBadge').textContent = `${c.queue_live_count} Active in Queue`;
+            document.getElementById('liveListBadge').textContent = `${c.history_linked_list_count} Total Records`;
+            document.getElementById('queueDetailText').textContent = `${c.queue_live_count} pending kitchen orders`;
+            document.getElementById('listDetailText').textContent = `${c.history_linked_list_count} orders linked in sequence`;
+        }
+    } catch(e) {}
+}
+
+document.addEventListener('DOMContentLoaded', refreshCStatus);
+</script>
+{% endblock %}
