@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # CampusBite - Smart Campus Food Court Ordering System
 
 A full-stack, modular, and responsive **College Food Court Ordering Web Application** built with clean separation into **Frontend**, **Backend**, **C-Core Algorithms**, and **Documentation**.
@@ -82,3 +83,6 @@ The following menu photos are hosted on Wikimedia Commons; their file pages incl
 - [Pav bhaji](https://commons.wikimedia.org/wiki/File:Pav_Bhaji.jpg)
 - [Gulab jamun](https://commons.wikimedia.org/wiki/File:Gulab_jamun_(Gibraltar,_November_2020).jpg)
 - [Ras malai](https://commons.wikimedia.org/wiki/File:Ras_Malai.JPG)
+=======
+# SMART_FOOD_COURT
+>>>>>>> 31841c8fd7b7eb65ec8d85844a2b92322e8c12aa
