@@ -1,0 +1,479 @@
+{% extends "base.html" %}
+
+{% block title %}My Cart & Checkout - CampusBite{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row g-4">
+        <div class="col-lg-7">
+            <div class="campus-card">
+                <div class="d-flex justify-content-between align-items-center mb-3 pb-2 border-bottom">
+                    <h4 class="fw-bold mb-0"><i class="bi bi-cart3 text-success me-2"></i> Your Tray / Cart</h4>
+                    <button class="btn btn-sm btn-outline-danger rounded-pill" onclick="clearCartConfirm()">
+                        <i class="bi bi-trash3 me-1"></i> Clear Tray
+                    </button>
+                </div>
+
+                <div id="cartItemsContainer">
+                </div>
+
+                <div id="emptyCartView" class="text-center py-5 d-none">
+                    <div class="text-muted mb-3"><i class="bi bi-bag-x fs-1"></i></div>
+                    <h5 class="fw-bold">Your tray is empty!</h5>
+                    <p class="text-muted small">Looks like you haven't added any campus food yet.</p>
+                    <a href="/student/dashboard" class="btn btn-campus-primary rounded-pill px-4 mt-2">
+                        <i class="bi bi-compass me-1"></i> Explore Food Menu
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-5" id="checkoutSummaryCol">
+            <div class="campus-card">
+                <h4 class="fw-bold mb-3 pb-2 border-bottom">Order Summary</h4>
+
+                <div class="d-flex justify-content-between mb-2">
+                    <span class="text-muted">Subtotal</span>
+                    <span class="fw-bold" id="summarySubtotal">₹0.00</span>
+                </div>
+                <div class="d-flex justify-content-between mb-2">
+                    <span class="text-muted">Campus Facility Tax</span>
+                    <span class="fw-bold text-success">₹0.00 (Waived)</span>
+                </div>
+                <div class="d-flex justify-content-between mb-3 pb-2 border-bottom">
+                    <span class="text-muted">Estimated Prep Time</span>
+                    <span class="fw-bold text-warning" id="summaryMaxPrep">~10 mins</span>
+                </div>
+
+                <div class="d-flex justify-content-between mb-4">
+                    <span class="fw-extrabold fs-5">Grand Total</span>
+                    <span class="fw-extrabold fs-4 text-success" id="summaryTotal">₹0.00</span>
+                </div>
+
+                <h5 class="fw-bold mb-2">Select Payment Method</h5>
+                <p class="text-muted small mb-3">Choose how you want to pay for this meal:</p>
+
+                <div class="form-check p-3 rounded-3 border mb-2 bg-light payment-option-card">
+                    <input class="form-check-input" type="radio" name="paymentOption" id="payUPI" value="UPI" checked>
+                    <label class="form-check-label w-100 ms-2" for="payUPI">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <span class="fw-bold text-dark"><i class="bi bi-qr-code text-primary me-1"></i> GPay / PhonePe / UPI</span>
+                            <span class="badge bg-primary-subtle text-primary border border-primary">Fast & Verified</span>
+                        </div>
+                        <div class="text-muted small mt-1">Instant digital token issuance & direct queue placement</div>
+                    </label>
+                </div>
+
+                <div class="form-check p-3 rounded-3 border mb-3 bg-light payment-option-card">
+                    <input class="form-check-input" type="radio" name="paymentOption" id="payCash" value="CASH">
+                    <label class="form-check-label w-100 ms-2" for="payCash">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <span class="fw-bold text-dark"><i class="bi bi-cash-stack text-success me-1"></i> Cash on Delivery / Pay at Counter</span>
+                            <span class="badge bg-secondary-subtle text-secondary border">Counter Token</span>
+                        </div>
+                        <div class="text-muted small mt-1">Receive pickup token now, pay cash directly to the cashier</div>
+                    </label>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label small text-muted fw-bold">Special Kitchen Instructions (Optional)</label>
+                    <input type="text" id="specialNotes" class="form-control rounded-3" placeholder="e.g. Less spicy, extra sambar, no onion">
+                </div>
+
+                <button class="btn btn-campus-orange w-100 py-3 fw-bold fs-6 shadow" id="confirmOrderBtn" onclick="initiateOrder()">
+                    <i class="bi bi-shield-check me-2"></i> Proceed to Confirm Order
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="orderResultModal" data-bs-backdrop="static" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content rounded-4 border-0 shadow-lg">
+            <div class="modal-body p-4 text-center">
+                <div class="text-success mb-2" id="modalIcon">
+                    <i class="bi bi-check-circle-fill display-3"></i>
+                </div>
+                <h3 class="fw-extrabold text-dark" id="modalHeading">Order Placed Successfully!</h3>
+                <p class="text-muted small mb-3" id="modalSub">Your meal request has been routed to the kitchen queue.</p>
+
+                <div class="p-3 bg-light rounded-4 mb-3 text-center border">
+                    <div class="small text-muted fw-bold text-uppercase mb-1">Your Pickup Token Number</div>
+                    <div class="token-badge-lg mb-2" id="modalToken">TKN-A1</div>
+                    <div class="bill-badge" id="modalBill">BILL-10001</div>
+                </div>
+
+                <div class="alert alert-info py-2 small mb-4" id="modalPayNote">
+                    <i class="bi bi-info-circle me-1"></i> Payment Verified via UPI.
+                </div>
+
+                <div class="d-flex gap-2">
+                    <a href="/orders" class="btn btn-campus-primary flex-grow-1 fw-bold py-2">
+                        <i class="bi bi-clock-history me-1"></i> Live Order Tracking
+                    </a>
+                    <a href="/student/dashboard" class="btn btn-outline-secondary rounded-pill fw-bold py-2 px-3">
+                        Menu
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="upiModal" data-bs-backdrop="static" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content rounded-4 border-0 shadow-lg overflow-hidden">
+            <div class="p-3 text-white d-flex justify-content-between align-items-center" style="background: linear-gradient(135deg, #1a73e8, #0d47a1);">
+                <div class="d-flex align-items-center gap-2">
+                    <span class="bg-white text-primary px-2 py-1 rounded fw-extrabold small shadow-sm">G Pay</span>
+                    <span class="fw-bold fs-6" id="gpayHeaderTitle">Google Pay</span>
+                </div>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+
+            <div id="gpayStep1" class="modal-body p-4 text-center bg-light">
+                <div class="mb-3">
+                    <div class="d-inline-flex p-3 rounded-circle bg-white shadow-sm border mb-2">
+                        <img src="https://upload.wikimedia.org/wikipedia/commons/f/f2/Google_Pay_Logo.svg" alt="Google Pay" style="height: 38px;">
+                    </div>
+                    <h5 class="fw-bold text-dark mt-2 mb-1">Pay with Google Pay</h5>
+                    <p class="text-muted small">CampusBite Smart Food Court &bull; Instant UPI Settlement</p>
+                </div>
+
+                <div class="bg-white p-3 rounded-4 shadow-sm border text-start mb-3">
+                    <div class="d-flex justify-content-between align-items-center pb-2 border-bottom mb-2">
+                        <span class="text-muted small">Merchant</span>
+                        <span class="fw-bold text-dark small">CampusBite Food Court</span>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center pb-2 border-bottom mb-2">
+                        <span class="text-muted small">UPI ID</span>
+                        <span class="text-secondary small font-monospace">campusfoodcourt@icici</span>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span class="fw-bold text-dark">Amount to Pay</span>
+                        <span class="display-6 fw-extrabold text-success" id="upiModalAmount">₹0.00</span>
+                    </div>
+                </div>
+
+                <div class="d-grid gap-2">
+                    <button class="btn btn-primary fw-bold py-3 rounded-pill shadow-sm d-flex align-items-center justify-content-center gap-2" onclick="goToPinStep()" style="background-color: #1a73e8; border: none;">
+                        <span>Proceed to Enter UPI PIN</span>
+                        <i class="bi bi-arrow-right-circle-fill fs-5"></i>
+                    </button>
+                    <button class="btn btn-outline-secondary fw-semibold py-2 rounded-pill" data-bs-dismiss="modal">
+                        Cancel Payment
+                    </button>
+                </div>
+            </div>
+
+            <div id="gpayStep2" class="modal-body p-4 text-center bg-light d-none">
+                <div class="d-flex align-items-center justify-content-between mb-3">
+                    <button class="btn btn-sm btn-outline-secondary rounded-pill border-0" onclick="goToOverviewStep()">
+                        <i class="bi bi-arrow-left me-1"></i> Back
+                    </button>
+                    <div class="small fw-bold text-muted">ENTER 4-DIGIT UPI PIN</div>
+                    <span class="badge bg-success-subtle text-success border border-success-subtle">DEMO MODE</span>
+                </div>
+
+                <div class="bg-white p-3 rounded-4 shadow-sm border mb-3">
+                    <div class="text-muted small">Paying CampusBite Food Court</div>
+                    <div class="fs-4 fw-extrabold text-dark my-1" id="gpayPinAmountDisplay">₹0.00</div>
+                    <div class="text-muted" style="font-size: 0.75rem;">Account: &bull;&bull;&bull;&bull; 8892 (State Bank of India)</div>
+                </div>
+
+                <div class="bg-white p-3 rounded-4 shadow-sm border mb-3">
+                    <label class="form-label fw-bold text-dark small mb-2 d-block">
+                        <i class="bi bi-shield-lock-fill text-primary me-1"></i> Enter UPI PIN to authorize payment
+                    </label>
+                    <div class="d-flex justify-content-center gap-2 mb-2">
+                        <input type="password" maxlength="1" class="form-control text-center fw-bold fs-3 pin-box" id="pinDigit1" inputmode="numeric" style="width: 52px; height: 56px; border-radius: 12px;">
+                        <input type="password" maxlength="1" class="form-control text-center fw-bold fs-3 pin-box" id="pinDigit2" inputmode="numeric" style="width: 52px; height: 56px; border-radius: 12px;">
+                        <input type="password" maxlength="1" class="form-control text-center fw-bold fs-3 pin-box" id="pinDigit3" inputmode="numeric" style="width: 52px; height: 56px; border-radius: 12px;">
+                        <input type="password" maxlength="1" class="form-control text-center fw-bold fs-3 pin-box" id="pinDigit4" inputmode="numeric" style="width: 52px; height: 56px; border-radius: 12px;">
+                    </div>
+                    
+                    <button type="button" class="btn btn-sm btn-light border rounded-pill small fw-bold text-muted mt-1" onclick="autoFillPin()">
+                        <i class="bi bi-magic me-1"></i> Click here to auto-fill PIN (1234)
+                    </button>
+
+                    <div id="pinAlert" class="alert alert-danger py-1 px-2 small text-center mt-2 mb-0 d-none">
+                        Please enter a valid 4-digit PIN!
+                    </div>
+                </div>
+
+                <div class="d-grid gap-2">
+                    <button class="btn btn-success fw-bold py-3 rounded-pill shadow-sm d-flex align-items-center justify-content-center gap-2" id="btnSubmitGPay" onclick="submitGPayPayment()">
+                        <i class="bi bi-check2-circle fs-5"></i>
+                        <span>Confirm & Authorize Payment</span>
+                    </button>
+                    <button class="btn btn-outline-secondary fw-semibold py-2 rounded-pill" onclick="goToOverviewStep()">
+                        Cancel
+                    </button>
+                </div>
+            </div>
+
+            <div id="gpayStep3" class="modal-body p-4 text-center bg-white d-none">
+                <div class="my-3">
+                    <div class="d-inline-flex p-3 rounded-circle bg-success text-white mb-3 shadow" style="width: 80px; height: 80px; align-items: center; justify-content: center;">
+                        <i class="bi bi-check-lg display-4"></i>
+                    </div>
+                    <h4 class="fw-extrabold text-success mb-1">Paid Successfully!</h4>
+                    <div class="fs-5 fw-bold text-dark" id="gpaySuccessAmount">₹0.00</div>
+                    <div class="text-muted small mt-1">UPI Transaction ID: <span class="font-monospace text-dark" id="gpayTxnId">UPI2938472910</span></div>
+                    <div class="badge bg-success-subtle text-success border border-success mt-2 px-3 py-1 rounded-pill">
+                        Order Confirmed with Kitchen
+                    </div>
+                </div>
+                <div class="spinner-border spinner-border-sm text-primary mt-2" role="status"></div>
+                <div class="text-muted small mt-1">Routing to your official pickup token...</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function renderCart() {
+    const items = Cart.getItems();
+    const container = document.getElementById('cartItemsContainer');
+    const emptyView = document.getElementById('emptyCartView');
+    const summaryCol = document.getElementById('checkoutSummaryCol');
+
+    if (items.length === 0) {
+        container.innerHTML = '';
+        emptyView.classList.remove('d-none');
+        summaryCol.style.opacity = '0.4';
+        document.getElementById('confirmOrderBtn').disabled = true;
+        document.getElementById('summarySubtotal').textContent = '₹0.00';
+        document.getElementById('summaryTotal').textContent = '₹0.00';
+        return;
+    }
+
+    emptyView.classList.add('d-none');
+    summaryCol.style.opacity = '1';
+    document.getElementById('confirmOrderBtn').disabled = false;
+
+    let total = 0;
+    let maxPrep = 0;
+
+    container.innerHTML = items.map(item => {
+        const itemSubtotal = item.price * item.quantity;
+        total += itemSubtotal;
+        if (item.prep_time_mins > maxPrep) maxPrep = item.prep_time_mins;
+
+        return `
+            <div class="d-flex align-items-center justify-content-between p-3 mb-2 rounded-3 bg-light border">
+                <div class="d-flex align-items-center gap-3">
+                    <img src="${item.image_url}" alt="${item.name}" class="rounded-3" style="width: 60px; height: 60px; object-fit: cover;">
+                    <div>
+                        <div class="fw-bold text-dark">${item.name}</div>
+                        <div class="text-muted small">₹${item.price.toFixed(2)} each &bull; <span class="${item.is_veg ? 'text-success' : 'text-danger'}">${item.is_veg ? 'Veg' : 'Non-Veg'}</span></div>
+                        <div class="text-success fw-bold small">₹${itemSubtotal.toFixed(2)}</div>
+                    </div>
+                </div>
+
+                <div class="d-flex align-items-center gap-3">
+                    <div class="qty-stepper">
+                        <button class="qty-btn" onclick="updateQty(${item.id}, -1)"><i class="bi bi-dash"></i></button>
+                        <span class="qty-display">${item.quantity}</span>
+                        <button class="qty-btn" onclick="updateQty(${item.id}, 1)"><i class="bi bi-plus"></i></button>
+                    </div>
+                    <button class="btn btn-sm btn-outline-danger border-0" onclick="removeItem(${item.id})">
+                        <i class="bi bi-x-lg"></i>
+                    </button>
+                </div>
+            </div>
+        `;
+    }).join('');
+
+    document.getElementById('summarySubtotal').textContent = `₹${total.toFixed(2)}`;
+    document.getElementById('summaryTotal').textContent = `₹${total.toFixed(2)}`;
+    document.getElementById('summaryMaxPrep').textContent = `~${maxPrep || 10} mins`;
+    document.getElementById('upiModalAmount').textContent = `₹${total.toFixed(2)}`;
+}
+
+function updateQty(id, delta) {
+    Cart.updateQuantity(id, delta);
+    renderCart();
+}
+
+function removeItem(id) {
+    Cart.removeItem(id);
+    renderCart();
+}
+
+function clearCartConfirm() {
+    if (confirm('Are you sure you want to remove all items from your tray?')) {
+        Cart.clear();
+        renderCart();
+    }
+}
+
+function goToPinStep() {
+    document.getElementById('gpayStep1').classList.add('d-none');
+    document.getElementById('gpayStep2').classList.remove('d-none');
+    document.getElementById('gpayStep3').classList.add('d-none');
+    document.getElementById('gpayHeaderTitle').textContent = 'Google Pay - Enter PIN';
+    document.getElementById('gpayPinAmountDisplay').textContent = document.getElementById('summaryTotal').textContent;
+    setTimeout(() => {
+        const p1 = document.getElementById('pinDigit1');
+        if (p1) p1.focus();
+    }, 200);
+}
+
+function goToOverviewStep() {
+    document.getElementById('gpayStep1').classList.remove('d-none');
+    document.getElementById('gpayStep2').classList.add('d-none');
+    document.getElementById('gpayStep3').classList.add('d-none');
+    document.getElementById('gpayHeaderTitle').textContent = 'Google Pay';
+}
+
+function autoFillPin() {
+    document.getElementById('pinDigit1').value = '1';
+    document.getElementById('pinDigit2').value = '2';
+    document.getElementById('pinDigit3').value = '3';
+    document.getElementById('pinDigit4').value = '4';
+    document.getElementById('pinAlert').classList.add('d-none');
+    document.getElementById('pinDigit4').focus();
+}
+
+function setupPinInputs() {
+    const inputs = [
+        document.getElementById('pinDigit1'),
+        document.getElementById('pinDigit2'),
+        document.getElementById('pinDigit3'),
+        document.getElementById('pinDigit4')
+    ];
+    inputs.forEach((inp, idx) => {
+        if (!inp) return;
+        inp.addEventListener('input', (e) => {
+            if (e.target.value.length >= 1 && idx < inputs.length - 1) {
+                inputs[idx + 1].focus();
+            }
+        });
+        inp.addEventListener('keydown', (e) => {
+            if (e.key === 'Backspace' && !e.target.value && idx > 0) {
+                inputs[idx - 1].focus();
+            }
+            if (e.key === 'Enter') {
+                submitGPayPayment();
+            }
+        });
+    });
+}
+
+function submitGPayPayment() {
+    const p1 = document.getElementById('pinDigit1').value;
+    const p2 = document.getElementById('pinDigit2').value;
+    const p3 = document.getElementById('pinDigit3').value;
+    const p4 = document.getElementById('pinDigit4').value;
+    const pin = `${p1}${p2}${p3}${p4}`;
+
+    const alertEl = document.getElementById('pinAlert');
+    if (pin.length !== 4 || !/^\d{4}$/.test(pin)) {
+        alertEl.textContent = 'Please enter all 4 digits of your UPI PIN!';
+        alertEl.classList.remove('d-none');
+        return;
+    }
+    alertEl.classList.add('d-none');
+
+    const btn = document.getElementById('btnSubmitGPay');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Authorizing with Bank...';
+
+    setTimeout(() => {
+        document.getElementById('gpayStep1').classList.add('d-none');
+        document.getElementById('gpayStep2').classList.add('d-none');
+        document.getElementById('gpayStep3').classList.remove('d-none');
+        document.getElementById('gpayHeaderTitle').textContent = 'Google Pay - Payment Complete';
+        document.getElementById('gpaySuccessAmount').textContent = document.getElementById('summaryTotal').textContent;
+        document.getElementById('gpayTxnId').textContent = 'UPI' + Math.floor(1000000000 + Math.random() * 9000000000);
+
+        setTimeout(() => {
+            completeCheckout(true, pin);
+        }, 1200);
+    }, 800);
+}
+
+function initiateOrder() {
+    const items = Cart.getItems();
+    if (items.length === 0) return;
+
+    const payOption = document.querySelector('input[name="paymentOption"]:checked').value;
+    if (payOption === 'UPI') {
+        goToOverviewStep();
+        ['pinDigit1', 'pinDigit2', 'pinDigit3', 'pinDigit4'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.value = '';
+        });
+        document.getElementById('pinAlert').classList.add('d-none');
+        const upiModal = new bootstrap.Modal(document.getElementById('upiModal'));
+        upiModal.show();
+    } else {
+        completeCheckout(false, '');
+    }
+}
+
+async function completeCheckout(simulatedSuccess, upiPin = '') {
+    const btn = document.getElementById('confirmOrderBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Placing order...';
+
+    const items = Cart.getItems().map(i => ({ food_id: i.id, quantity: i.quantity }));
+    const paymentMethod = document.querySelector('input[name="paymentOption"]:checked').value;
+    const specialInstructions = document.getElementById('specialNotes').value.trim();
+
+    try {
+        const res = await fetch('/api/orders/place', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                items: items,
+                payment_method: paymentMethod,
+                simulated_payment: simulatedSuccess,
+                upi_pin: upiPin,
+                special_instructions: specialInstructions
+            })
+        });
+
+        const data = await res.json();
+
+        const upiModalEl = document.getElementById('upiModal');
+        const modalInstance = bootstrap.Modal.getInstance(upiModalEl);
+        if (modalInstance) modalInstance.hide();
+
+        if (data.success) {
+            Cart.clear();
+            renderCart();
+
+            document.getElementById('modalToken').textContent = data.order.token_no;
+            document.getElementById('modalBill').textContent = data.order.bill_no;
+            document.getElementById('modalPayNote').textContent = data.order.payment_method === 'UPI' 
+                ? 'Payment status: PAID via Google Pay (PIN Verified)' 
+                : 'Payment status: PENDING (Please pay at the cashier counter)';
+
+            const resultModal = new bootstrap.Modal(document.getElementById('orderResultModal'));
+            resultModal.show();
+        } else {
+            alert('Order placement failed: ' + data.error);
+        }
+    } catch (err) {
+        alert('Server communication error: ' + err);
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="bi bi-shield-check me-2"></i> Proceed to Confirm Order';
+        const gpayBtn = document.getElementById('btnSubmitGPay');
+        if (gpayBtn) {
+            gpayBtn.disabled = false;
+            gpayBtn.innerHTML = '<i class="bi bi-check2-circle fs-5"></i><span>Confirm & Authorize Payment</span>';
+        }
+    }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    renderCart();
+    setupPinInputs();
+});
+window.addEventListener('cartUpdated', renderCart);
+</script>
+{% endblock %}

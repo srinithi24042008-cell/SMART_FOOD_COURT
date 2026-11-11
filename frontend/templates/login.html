@@ -1,0 +1,119 @@
+{% extends "base.html" %}
+
+{% block title %}User Sign In - CampusBite{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6 col-lg-5">
+            <div class="campus-card shadow-lg p-4 p-md-5">
+                <div class="text-center mb-4">
+                    <span class="brand-badge fs-6 mb-2"><i class="bi bi-person-circle"></i> Campus User Portal</span>
+                    <h3 class="fw-bold mt-2">Sign In to Order</h3>
+                    <p class="text-muted small">Open to students, teachers, parents, and visitors. Order queue-free meals anytime.</p>
+                </div>
+
+                <div id="loginAlert" class="alert alert-danger d-none" role="alert"></div>
+
+                <form id="loginForm">
+                    <div class="mb-3">
+                        <label class="form-label fw-bold small text-muted">Email Address</label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-light border-end-0"><i class="bi bi-envelope text-muted"></i></span>
+                            <input type="email" id="email" class="form-control bg-light border-start-0" placeholder="e.g. user@campus.edu or yourname@gmail.com" required>
+                        </div>
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="form-label fw-bold small text-muted">Password</label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-light border-end-0"><i class="bi bi-lock text-muted"></i></span>
+                            <input type="password" id="password" class="form-control bg-light border-start-0" placeholder="Enter password" required>
+                            <button class="btn btn-outline-secondary border-start-0" type="button" id="togglePassword">
+                                <i class="bi bi-eye"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn btn-campus-primary w-100 py-2 fs-6 fw-bold mb-3" id="submitBtn">
+                        <i class="bi bi-box-arrow-in-right me-1"></i> Sign In to Order
+                    </button>
+
+                    <div class="text-center mb-3">
+                        <span class="text-muted small">New to Campus Food Court? </span>
+                        <a href="/signup" class="fw-bold text-success text-decoration-none small">Create User Account</a>
+                    </div>
+
+                    <hr class="my-3">
+
+                    <div class="bg-light p-3 rounded-3 text-center">
+                        <div class="small fw-bold text-muted mb-2"><i class="bi bi-magic me-1"></i> Quick Test Account</div>
+                        <button type="button" class="btn btn-sm btn-outline-success fw-bold rounded-pill w-100" onclick="fillStudentDemo()">
+                            Auto-fill Demo User Credentials
+                        </button>
+                    </div>
+
+                    <div class="text-center mt-3">
+                        <a href="/biller/login" class="text-muted small text-decoration-none">
+                            <i class="bi bi-arrow-left-right me-1"></i> Are you a Food Court Staff/Biller?
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.getElementById('togglePassword').addEventListener('click', function() {
+    const pwdInput = document.getElementById('password');
+    const icon = this.querySelector('i');
+    if (pwdInput.type === 'password') {
+        pwdInput.type = 'text';
+        icon.classList.replace('bi-eye', 'bi-eye-slash');
+    } else {
+        pwdInput.type = 'password';
+        icon.classList.replace('bi-eye-slash', 'bi-eye');
+    }
+});
+
+function fillStudentDemo() {
+    document.getElementById('email').value = 'user@campus.edu';
+    document.getElementById('password').value = 'campus123';
+}
+
+document.getElementById('loginForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    const alertEl = document.getElementById('loginAlert');
+    const btn = document.getElementById('submitBtn');
+    alertEl.classList.add('d-none');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Signing in...';
+
+    const email = document.getElementById('email').value.trim();
+    const password = document.getElementById('password').value;
+
+    try {
+        const res = await fetch('/api/auth/login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email, password, role: 'student' })
+        });
+        const data = await res.json();
+        if (data.success) {
+            window.location.href = data.redirect || '/student/dashboard';
+        } else {
+            alertEl.textContent = data.error || 'Login failed';
+            alertEl.classList.remove('d-none');
+            btn.disabled = false;
+            btn.innerHTML = '<i class="bi bi-box-arrow-in-right me-1"></i> Sign In to Order';
+        }
+    } catch (err) {
+        alertEl.textContent = 'Server error. Please try again.';
+        alertEl.classList.remove('d-none');
+        btn.disabled = false;
+        btn.innerHTML = '<i class="bi bi-box-arrow-in-right me-1"></i> Sign In to Order';
+    }
+});
+</script>
+{% endblock %}

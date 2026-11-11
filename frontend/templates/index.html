@@ -1,0 +1,118 @@
+{% extends "base.html" %}
+
+{% block title %}CampusBite - Smart Campus Food Court Ordering{% endblock %}
+
+{% block content %}
+<div class="py-5" style="background: radial-gradient(circle at top right, #EBF5EE, var(--bg-cream));">
+    <div class="container py-4">
+        <div class="row align-items-center g-5">
+            <div class="col-lg-7">
+                <span class="badge bg-success-subtle text-success px-3 py-2 rounded-pill fw-bold mb-3 border border-success-subtle">
+                    <i class="bi bi-lightning-charge-fill me-1"></i> Say Goodbye to Long Canteen Queues
+                </span>
+                <h1 class="display-4 fw-extrabold text-dark mb-3">
+                    Order Hot Campus Meals, <br>
+                    <span style="color: var(--brand-green-primary);">Pick Up Right On Time.</span>
+                </h1>
+                <p class="lead text-secondary mb-4">
+                    Order in seconds from your phone or laptop. Choose between instant UPI or Pay-at-Counter with verified pickup tokens. Track your order status in real time as the kitchen cooks!
+                </p>
+
+                <div class="d-flex flex-wrap gap-3 mb-4">
+                    <a href="/login" class="btn btn-campus-primary btn-lg px-4 shadow">
+                        <i class="bi bi-person-fill me-2"></i> User Ordering Portal
+                    </a>
+                    <a href="/biller/login" class="btn btn-campus-orange btn-lg px-4 shadow">
+                        <i class="bi bi-speedometer2 me-2"></i> Food Court Staff / Biller Portal
+                    </a>
+                </div>
+
+                <div class="card border-0 shadow-sm p-3 rounded-4 bg-white border border-light">
+                    <div class="fw-bold text-dark small mb-2 text-uppercase letter-spacing-1">
+                        <i class="bi bi-stars text-warning me-1"></i> Quick One-Click Demo Access
+                    </div>
+                    <div class="d-flex flex-wrap gap-2">
+                        <button class="btn btn-sm btn-outline-success rounded-pill fw-bold" onclick="quickDemoLogin('student')">
+                            <i class="bi bi-person-check-fill me-1"></i> Log in as Demo User (Any Visitor / Campus Member)
+                        </button>
+                        <button class="btn btn-sm btn-outline-dark rounded-pill fw-bold" onclick="quickDemoLogin('biller')">
+                            <i class="bi bi-receipt-cutoff me-1"></i> Log in as Demo Biller / Cashier
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-5">
+                <div class="position-relative">
+                    <img src="https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=800&auto=format&fit=crop&q=80" 
+                         alt="Delicious Campus Food" class="img-fluid rounded-5 shadow-lg border border-4 border-white">
+                    <div class="position-absolute bottom-0 start-0 m-3 p-3 bg-white rounded-4 shadow d-flex align-items-center gap-3">
+                        <div class="bg-success text-white rounded-circle p-2 d-flex align-items-center justify-content-center" style="width: 44px; height: 44px;">
+                            <i class="bi bi-check2-circle fs-4"></i>
+                        </div>
+                        <div>
+                            <div class="fw-bold small text-dark">Queue-Free Ordering</div>
+                            <div class="text-muted" style="font-size: 0.75rem;">Instant digital token generation</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="container py-5">
+    <div class="text-center mb-5">
+        <h2 class="fw-bold text-dark">Open to Everyone on Campus</h2>
+        <p class="text-muted">Designed for students, teachers, parents, and visitors with zero delay and fresh hot food.</p>
+    </div>
+
+    <div class="row g-4">
+        <div class="col-md-4">
+            <div class="campus-card h-100">
+                <div class="text-success mb-3 fs-1"><i class="bi bi-qr-code-scan"></i></div>
+                <h5 class="fw-bold">Smart Pickup Tokens</h5>
+                <p class="text-muted small">Every order produces a distinctive alphanumeric pickup token (e.g. TKN-A47) and unique bill number for lightning-fast handover at the counter.</p>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="campus-card h-100">
+                <div class="text-primary mb-3 fs-1"><i class="bi bi-wallet2"></i></div>
+                <h5 class="fw-bold">Dual Payment Flexibility</h5>
+                <p class="text-muted small">Support for direct UPI / Google Pay with 4-digit PIN verification or Pay-at-Counter cash collection with live verification by billers.</p>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="campus-card h-100">
+                <div class="text-warning mb-3 fs-1"><i class="bi bi-cup-hot-fill"></i></div>
+                <h5 class="fw-bold">Fresh Multi-Cuisine Menu</h5>
+                <p class="text-muted small">26 delicious dishes spanning South Indian, North Indian, Combos, Chaat, Hot Beverages, and Desserts with live prep tracking.</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+async function quickDemoLogin(role) {
+    const creds = role === 'student' 
+        ? { email: 'user@campus.edu', password: 'campus123' }
+        : { email: 'biller@campus.edu', password: 'biller123', role: 'biller' };
+        
+    try {
+        const res = await fetch('/api/auth/login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(creds)
+        });
+        const data = await res.json();
+        if (data.success) {
+            window.location.href = data.redirect;
+        } else {
+            alert(data.error);
+        }
+    } catch (e) {
+        alert('Login failed: ' + e);
+    }
+}
+</script>
+{% endblock %}

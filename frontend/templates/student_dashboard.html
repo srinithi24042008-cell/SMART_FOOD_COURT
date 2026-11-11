@@ -1,0 +1,215 @@
+{% extends "base.html" %}
+
+{% block title %}Campus Menu & Order - CampusBite{% endblock %}
+
+{% block content %}z
+<div class="container py-4">
+    <div class="row align-items-center mb-4 g-3">
+        <div class="col-md-6">
+            <h2 class="fw-bold mb-1"><i class="bi bi-egg-fried text-success me-2"></i>Campus Dining Menu</h2>
+            <p class="text-muted small mb-0">Fresh food prepared to order for students, faculty, parents & visitors. Order queue-free!</p>
+        </div>
+        <div class="col-md-6">
+            <div class="input-group shadow-sm rounded-pill overflow-hidden bg-white border">
+                <span class="input-group-text bg-white border-0 ps-3 text-muted"><i class="bi bi-search"></i></span>
+                <input type="text" id="searchInput" class="form-control border-0 bg-white" placeholder="Search by food name, dosa, biryani, coffee...">
+                <button class="btn btn-outline-secondary border-0 pe-3" type="button" id="clearSearchBtn" style="display:none;">
+                    <i class="bi bi-x-circle-fill"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-4 pb-2 border-bottom">
+        <div class="d-flex flex-wrap gap-2 overflow-auto py-1" id="categoryChips">
+            <button class="category-chip active" data-cat="All"><i class="bi bi-grid-fill"></i> All Items</button>
+        </div>
+
+        <div class="btn-group btn-group-sm rounded-pill border bg-white p-1" role="group">
+            <input type="radio" class="btn-check" name="dietRadio" id="dietAll" value="" checked>
+            <label class="btn btn-sm btn-outline-secondary border-0 rounded-pill px-3" for="dietAll">All</label>
+
+            <input type="radio" class="btn-check" name="dietRadio" id="dietVeg" value="1">
+            <label class="btn btn-sm btn-outline-success border-0 rounded-pill px-3" for="dietVeg"><i class="bi bi-circle-fill text-success" style="font-size:0.6rem;"></i> Pure Veg</label>
+
+            <input type="radio" class="btn-check" name="dietRadio" id="dietNonVeg" value="0">
+            <label class="btn btn-sm btn-outline-danger border-0 rounded-pill px-3" for="dietNonVeg"><i class="bi bi-triangle-fill text-danger" style="font-size:0.6rem;"></i> Non-Veg</label>
+        </div>
+    </div>
+
+    <div class="row g-4" id="foodGrid">
+        <div class="col-12 text-center py-5">
+            <div class="spinner-border text-success" role="status"></div>
+            <p class="text-muted small mt-2">Loading campus food menu...</p>
+        </div>
+    </div>
+</div>
+
+<a href="/cart" class="floating-cart-pill">
+    <i class="bi bi-bag-check-fill fs-5"></i>
+    <span>Cart (<span class="cart-count-badge">0</span>) &bull; <span class="cart-total-badge">₹0.00</span></span>
+</a>
+
+<script>
+let allFoodItems = [];
+let activeCategory = 'All';
+let activeDiet = '';
+let activeSearch = '';
+
+async function loadMenu() {
+    try {
+        const res = await fetch('/api/food/items');
+        const data = await res.json();
+        if (data.success) {
+            allFoodItems = data.items;
+            renderCategories(data.categories);
+            renderFoodGrid();
+        }
+    } catch (e) {
+        document.getElementById('foodGrid').innerHTML = `
+            <div class="col-12 text-center py-5">
+                <i class="bi bi-exclamation-triangle text-danger fs-1"></i>
+                <h5 class="fw-bold mt-2">Failed to load food menu</h5>
+                <p class="text-muted">Please refresh the page or check connection.</p>
+            </div>
+        `;
+    }
+}
+
+function renderCategories(cats) {
+    const container = document.getElementById('categoryChips');
+    let html = `<button class="category-chip ${activeCategory === 'All' ? 'active' : ''}" onclick="selectCategory('All')"><i class="bi bi-grid-fill"></i> All Items</button>`;
+    cats.forEach(c => {
+        html += `
+            <button class="category-chip ${activeCategory === c.name ? 'active' : ''}" onclick="selectCategory('${c.name}')">
+                <i class="bi ${c.icon || 'bi-tag'}"></i> ${c.name}
+            </button>
+        `;
+    });
+    container.innerHTML = html;
+}
+
+function selectCategory(catName) {
+    activeCategory = catName;
+    document.querySelectorAll('.category-chip').forEach(btn => {
+        btn.classList.toggle('active', btn.textContent.includes(catName) || (catName === 'All' && btn.textContent.includes('All')));
+    });
+    renderFoodGrid();
+}
+
+function renderFoodGrid() {
+    const container = document.getElementById('foodGrid');
+    let filtered = allFoodItems.filter(item => {
+        const matchesCategory = (activeCategory === 'All') || (item.category === activeCategory);
+        const matchesDiet = (activeDiet === '') || (String(item.is_veg) === activeDiet);
+        const matchesSearch = (!activeSearch) || 
+            (item.name.toLowerCase().includes(activeSearch)) || 
+            (item.description && item.description.toLowerCase().includes(activeSearch));
+        return matchesCategory && matchesDiet && matchesSearch;
+    });
+
+    if (filtered.length === 0) {
+        container.innerHTML = `
+            <div class="col-12 text-center py-5">
+                <div class="text-muted mb-2"><i class="bi bi-search fs-1"></i></div>
+                <h5 class="fw-bold text-dark">No food items found</h5>
+                <p class="text-muted small">Try altering your search or filters.</p>
+                <button class="btn btn-sm btn-outline-success rounded-pill" onclick="resetFilters()">Reset All Filters</button>
+            </div>
+        `;
+        return;
+    }
+
+    container.innerHTML = filtered.map(item => {
+        const isOutOfStock = (item.is_available === 0) || (item.stock_quantity <= 0);
+        return `
+            <div class="col-sm-6 col-lg-4 col-xl-3">
+                <div class="food-card">
+                    <div class="food-card-img-wrapper">
+                        <img src="${item.image_url}" alt="${item.name}" class="food-card-img" onerror="this.src='https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=600'">
+                        <span class="diet-badge ${item.is_veg ? 'diet-veg' : 'diet-non-veg'}">
+                            <i class="bi ${item.is_veg ? 'bi-circle-fill' : 'bi-triangle-fill'}"></i>
+                            ${item.is_veg ? 'VEG' : 'NON-VEG'}
+                        </span>
+                        <span class="prep-time-badge">
+                            <i class="bi bi-stopwatch me-1"></i>${item.prep_time_mins}m
+                        </span>
+                    </div>
+
+                    <div class="food-card-body">
+                        <div class="d-flex justify-content-between align-items-start mb-1">
+                            <h5 class="food-title">${item.name}</h5>
+                            ${item.is_featured ? '<span class="badge bg-warning-subtle text-dark border border-warning" style="font-size:0.65rem;">Chef Special</span>' : ''}
+                        </div>
+                        <p class="food-desc">${item.description || ''}</p>
+
+                        <div class="d-flex align-items-center justify-content-between mt-auto pt-2 border-top">
+                            <div>
+                                <span class="food-price">₹${item.price.toFixed(2)}</span>
+                                <div class="small ${item.stock_quantity <= 5 ? 'text-danger fw-bold' : 'text-muted'}" style="font-size: 0.75rem;">
+                                    ${isOutOfStock ? '<span class="badge bg-danger">Out of Stock</span>' : `${item.stock_quantity} left`}
+                                </div>
+                            </div>
+
+                            <button class="btn-add-cart" onclick="addToCart(${item.id})" ${isOutOfStock ? 'disabled' : ''}>
+                                <i class="bi bi-plus-lg"></i> Add
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+function addToCart(foodId) {
+    const item = allFoodItems.find(i => i.id === foodId);
+    if (item) {
+        Cart.addItem(item);
+    }
+}
+
+function resetFilters() {
+    activeCategory = 'All';
+    activeDiet = '';
+    activeSearch = '';
+    document.getElementById('searchInput').value = '';
+    document.getElementById('clearSearchBtn').style.display = 'none';
+    document.getElementById('dietAll').checked = true;
+    selectCategory('All');
+}
+
+document.getElementById('searchInput').addEventListener('input', function(e) {
+    activeSearch = e.target.value.trim().toLowerCase();
+    document.getElementById('clearSearchBtn').style.display = activeSearch ? 'inline-block' : 'none';
+    renderFoodGrid();
+});
+
+document.getElementById('clearSearchBtn').addEventListener('click', function() {
+    document.getElementById('searchInput').value = '';
+    activeSearch = '';
+    this.style.display = 'none';
+    renderFoodGrid();
+});
+
+document.querySelectorAll('input[name="dietRadio"]').forEach(r => {
+    r.addEventListener('change', function(e) {
+        activeDiet = e.target.value;
+        renderFoodGrid();
+    });
+});
+
+setInterval(async () => {
+    try {
+        const res = await fetch('/api/food/items');
+        const data = await res.json();
+        if (data.success) {
+            allFoodItems = data.items;
+            renderFoodGrid();
+        }
+    } catch(e) {}
+}, 10000);
+
+document.addEventListener('DOMContentLoaded', loadMenu);
+</script>
+{% endblock %}

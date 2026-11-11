@@ -1,0 +1,115 @@
+{% extends "base.html" %}
+
+{% block title %}Create User Account - CampusBite{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-md-7 col-lg-6">
+            <div class="campus-card shadow-lg p-4 p-md-5">
+                <div class="text-center mb-4">
+                    <span class="brand-badge fs-6 mb-2"><i class="bi bi-person-plus-fill"></i> New User Registration</span>
+                    <h3 class="fw-bold mt-2">Create Your Account</h3>
+                    <p class="text-muted small">Open to all students, faculty, staff, parents, and campus visitors!</p>
+                </div>
+
+                <div id="signupAlert" class="alert alert-danger d-none" role="alert"></div>
+
+                <form id="signupForm">
+                    <div class="row g-3">
+                        <div class="col-12">
+                            <label class="form-label fw-bold small text-muted">Full Name</label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-light border-end-0"><i class="bi bi-person text-muted"></i></span>
+                                <input type="text" id="name" class="form-control bg-light border-start-0" placeholder="e.g. Diya Sengupta / Ramesh Patel" required>
+                            </div>
+                        </div>
+
+                        <div class="col-12">
+                            <label class="form-label fw-bold small text-muted">Email Address</label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-light border-end-0"><i class="bi bi-envelope text-muted"></i></span>
+                                <input type="email" id="email" class="form-control bg-light border-start-0" placeholder="e.g. diya.s@campus.edu or name@gmail.com" required>
+                            </div>
+                        </div>
+
+                        <div class="col-12">
+                            <label class="form-label fw-bold small text-muted">Phone Number</label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-light border-end-0"><i class="bi bi-phone text-muted"></i></span>
+                                <input type="tel" id="phone" class="form-control bg-light border-start-0" placeholder="e.g. 9876543210" required>
+                            </div>
+                        </div>
+
+                        <div class="col-12">
+                            <label class="form-label fw-bold small text-muted">Password (min 6 characters)</label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-light border-end-0"><i class="bi bi-lock text-muted"></i></span>
+                                <input type="password" id="password" class="form-control bg-light border-start-0" placeholder="Choose a secure password" minlength="6" required>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-check mt-3 mb-4">
+                        <input class="form-check-input" type="checkbox" id="terms" required>
+                        <label class="form-check-label small text-muted" for="terms">
+                            I agree to abide by Campus Food Court meal pickup and token policies.
+                        </label>
+                    </div>
+
+                    <button type="submit" class="btn btn-campus-primary w-100 py-2 fs-6 fw-bold mb-3" id="submitBtn">
+                        <i class="bi bi-check2-circle me-1"></i> Complete Registration
+                    </button>
+
+                    <div class="text-center">
+                        <span class="text-muted small">Already have an account? </span>
+                        <a href="/login" class="fw-bold text-success text-decoration-none small">Sign In here</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.getElementById('signupForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    const alertEl = document.getElementById('signupAlert');
+    const btn = document.getElementById('submitBtn');
+    alertEl.classList.add('d-none');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Creating account...';
+
+    const payload = {
+        name: document.getElementById('name').value.trim(),
+        email: document.getElementById('email').value.trim(),
+        student_id: '',
+        phone: document.getElementById('phone').value.trim(),
+        password: document.getElementById('password').value,
+        role: 'student'
+    };
+
+    try {
+        const res = await fetch('/api/auth/register', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+        if (data.success) {
+            window.location.href = data.redirect || '/student/dashboard';
+        } else {
+            alertEl.textContent = data.error || 'Registration failed';
+            alertEl.classList.remove('d-none');
+            btn.disabled = false;
+            btn.innerHTML = '<i class="bi bi-check2-circle me-1"></i> Complete Registration';
+        }
+    } catch (err) {
+        alertEl.textContent = 'Server error. Please try again.';
+        alertEl.classList.remove('d-none');
+        btn.disabled = false;
+        btn.innerHTML = '<i class="bi bi-check2-circle me-1"></i> Complete Registration';
+    }
+});
+</script>
+{% endblock %}

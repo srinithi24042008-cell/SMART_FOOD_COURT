@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Smart Campus Food Court{% endblock %}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+    {% block extra_head %}{% endblock %}
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-campus">
+        <div class="container-fluid px-lg-4">
+            <a class="navbar-brand d-flex align-items-center gap-2 text-decoration-none" href="/">
+                <span class="brand-badge"><i class="bi bi-fire"></i> CampusBite</span>
+                <span class="d-none d-sm-inline fw-bold text-muted small border-start ps-2 border-2">Smart Food Court</span>
+            </a>
+
+            <button class="navbar-toggler border-0" type="button" data-bs-toggle="collapse" data-bs-target="#campusNavbar">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+
+            <div class="collapse navbar-collapse" id="campusNavbar">
+                <ul class="navbar-nav me-auto mb-2 mb-lg-0 ms-lg-3 gap-1">
+                    {% if session.get('user_id') and session.get('role') == 'student' %}
+                        <li class="nav-item">
+                            <a class="nav-link-campus {% if request.endpoint == 'student_dashboard' %}active{% endif %}" href="/student/dashboard">
+                                <i class="bi bi-grid"></i> Menu
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link-campus {% if request.endpoint == 'cart_page' %}active{% endif %}" href="/cart">
+                                <i class="bi bi-bag"></i> Cart
+                                <span class="badge bg-danger rounded-pill cart-count-badge" style="display:none;">0</span>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link-campus {% if request.endpoint == 'orders_page' %}active{% endif %}" href="/orders">
+                                <i class="bi bi-clock-history"></i> My Orders
+                            </a>
+                        </li>
+                    {% elif session.get('user_id') and session.get('role') == 'biller' %}
+                        <li class="nav-item">
+                            <a class="nav-link-campus active" href="/biller/dashboard">
+                                <i class="bi bi-speedometer2"></i> Billing & Kitchen Console
+                            </a>
+                        </li>
+                    {% endif %}
+                </ul>
+
+                <div class="d-flex align-items-center gap-2">
+                    {% if session.get('user_id') %}
+                        <div class="dropdown position-relative me-1">
+                            <button class="btn btn-light rounded-circle p-2 position-relative shadow-sm" type="button" id="notifDropdownBtn" data-bs-toggle="dropdown" aria-expanded="false">
+                                <i class="bi bi-bell fs-5 text-dark"></i>
+                                <span id="notifBadge" class="notif-badge" style="display:none;">0</span>
+                            </button>
+                            <div class="dropdown-menu dropdown-menu-end shadow-lg border-0 p-0" style="width: 320px; max-height: 400px; overflow-y: auto;" aria-labelledby="notifDropdownBtn">
+                                <div class="p-3 bg-light border-bottom d-flex justify-content-between align-items-center">
+                                    <span class="fw-bold small text-dark"><i class="bi bi-bell-fill text-warning me-1"></i> Live Notifications</span>
+                                    <span class="text-muted" style="font-size: 0.75rem;">Real-time</span>
+                                </div>
+                                <div id="notifList">
+                                    <div class="p-3 text-center text-muted small">Loading notifications...</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="dropdown">
+                            <button class="btn btn-outline-secondary rounded-pill px-3 py-1 dropdown-toggle small fw-semibold" type="button" data-bs-toggle="dropdown">
+                                <i class="bi bi-person-circle me-1"></i> {{ session.get('name', 'User') }}
+                                <span class="badge bg-secondary ms-1">{% if session.get('role') == 'biller' %}Biller{% else %}User{% endif %}</span>
+                            </button>
+                            <ul class="dropdown-menu dropdown-menu-end shadow border-0">
+                                <li class="px-3 py-1 text-muted small">Signed in as<br><strong class="text-dark">{{ session.get('email') }}</strong></li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li><a class="dropdown-item text-danger fw-semibold" href="/api/auth/logout"><i class="bi bi-box-arrow-right me-2"></i> Log Out</a></li>
+                            </ul>
+                        </div>
+                    {% else %}
+                        <a href="/login" class="btn btn-outline-success rounded-pill px-3 py-1 fw-semibold">User Login</a>
+                        <a href="/biller/login" class="btn btn-campus-orange rounded-pill px-3 py-1 fw-semibold">Biller Portal</a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <main class="flex-grow-1">
+        {% block content %}{% endblock %}
+    </main>
+
+    <footer class="bg-white border-top py-3 mt-auto">
+        <div class="container text-center text-muted small">
+            <div class="d-flex flex-wrap justify-content-between align-items-center">
+                <span>&copy; 2026 CampusBite Smart Food Court &bull; Queue-Free Campus Dining</span>
+                <span class="text-secondary">Open to Students, Faculty, Parents &amp; Visitors</span>
+            </div>
+        </div>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+    {% block extra_scripts %}{% endblock %}
+</body>
+</html>
